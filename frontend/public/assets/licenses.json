@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Kenney City Kit Roads",
+    "author": "Kenney",
+    "license": "Creative Commons CC0",
+    "source": "https://www.kenney.nl/assets/city-kit-roads",
+    "downloaded_at": "2026-05-22",
+    "files_used": [
+      "road-roundabout.glb",
+      "road-straight.glb",
+      "light-square.glb",
+      "construction-cone.glb",
+      "License.txt"
+    ]
+  }
+]
+
