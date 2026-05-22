@@ -12,6 +12,22 @@
       "construction-cone.glb",
       "License.txt"
     ]
+  },
+  {
+    "name": "Kenney Blocky Characters",
+    "author": "Kenney",
+    "license": "Creative Commons CC0",
+    "source": "https://www.kenney.nl/assets/blocky-characters",
+    "downloaded_at": "2026-05-22",
+    "files_used": [
+      "character-a.glb",
+      "character-c.glb",
+      "character-f.glb",
+      "character-i.glb",
+      "character-l.glb",
+      "character-o.glb",
+      "character-r.glb",
+      "License.txt"
+    ]
   }
 ]
-

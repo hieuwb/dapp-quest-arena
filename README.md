@@ -54,4 +54,4 @@ Do not replace it with `py-genlayer:test` for public Studio/studionet deploys; c
 
 ## Assets
 
-The 3D arena uses selected files from Kenney City Kit Roads, licensed CC0. See `frontend/public/assets/licenses.json`.
+The 3D arena uses selected files from Kenney City Kit Roads and Kenney Blocky Characters, licensed CC0. See `frontend/public/assets/licenses.json`.

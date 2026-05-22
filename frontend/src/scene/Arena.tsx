@@ -1,11 +1,14 @@
 import { Clone, Text, useGLTF } from '@react-three/drei'
-import { useMemo } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { useMemo, useRef } from 'react'
+import type { Mesh } from 'three'
 import type { Group } from 'three'
 import type { Room } from '../types'
 import { LeaderboardPodium } from './LeaderboardPodium'
 import { PlayerAvatar } from './PlayerAvatar'
 
 const ASSET_BASE = '/assets/kenney-city-kit-roads'
+const BADGE_COLORS = ['#7cf7ff', '#ffd166', '#ff6bcb', '#8aff80', '#ff8f5f']
 
 function Model({
   path,
@@ -36,15 +39,112 @@ useGLTF.preload(`${ASSET_BASE}/road-straight.glb`)
 useGLTF.preload(`${ASSET_BASE}/light-square.glb`)
 useGLTF.preload(`${ASSET_BASE}/construction-cone.glb`)
 
+function ValidatorDrone({
+  angle,
+  index,
+  active,
+}: {
+  angle: number
+  index: number
+  active: boolean
+}) {
+  const ref = useRef<Mesh>(null)
+  const color = BADGE_COLORS[index % BADGE_COLORS.length]
+
+  useFrame(({ clock }) => {
+    if (!ref.current) return
+    ref.current.position.y = 2.15 + Math.sin(clock.elapsedTime * 1.8 + index) * 0.18
+    ref.current.rotation.y = clock.elapsedTime * 1.2 + angle
+  })
+
+  return (
+    <group position={[Math.cos(angle) * 3.15, 2.15, Math.sin(angle) * 3.15]}>
+      <mesh ref={ref} castShadow>
+        <octahedronGeometry args={[0.26, 0]} />
+        <meshStandardMaterial
+          color={active ? color : '#334155'}
+          emissive={active ? color : '#111827'}
+          emissiveIntensity={active ? 1.2 : 0.25}
+          roughness={0.35}
+          metalness={0.35}
+        />
+      </mesh>
+      <pointLight color={color} intensity={active ? 0.45 : 0.1} distance={5} />
+    </group>
+  )
+}
+
+function HologramRing({ active }: { active: boolean }) {
+  const ref = useRef<Mesh>(null)
+  useFrame(({ clock }) => {
+    if (!ref.current) return
+    ref.current.rotation.z = clock.elapsedTime * 0.35
+    ref.current.scale.setScalar(active ? 1 + Math.sin(clock.elapsedTime * 2.4) * 0.025 : 1)
+  })
+
+  return (
+    <mesh ref={ref} position={[0, 1.48, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      <torusGeometry args={[2.55, 0.028, 12, 96]} />
+      <meshStandardMaterial
+        color={active ? '#7cf7ff' : '#35516d'}
+        emissive={active ? '#35cfff' : '#102a43'}
+        emissiveIntensity={active ? 1.8 : 0.4}
+      />
+    </mesh>
+  )
+}
+
+function ArenaBanner({ room }: { room: Room | null }) {
+  const status = room
+    ? `${room.submissions.length}/20 players · ${room.xpTotal} XP · ${room.status}`
+    : 'pick a weekly room'
+
+  return (
+    <group position={[0, 3.15, -4.35]} rotation={[-0.14, 0, 0]}>
+      <mesh receiveShadow>
+        <boxGeometry args={[6.7, 1.15, 0.08]} />
+        <meshStandardMaterial
+          color="#07111f"
+          emissive="#123d5a"
+          emissiveIntensity={0.35}
+          roughness={0.5}
+        />
+      </mesh>
+      <Text
+        position={[0, 0.2, 0.08]}
+        fontSize={0.28}
+        color="#ffffff"
+        maxWidth={6}
+        textAlign="center"
+        anchorX="center"
+      >
+        {room?.title ?? 'Quest Arena'}
+      </Text>
+      <Text
+        position={[0, -0.26, 0.08]}
+        fontSize={0.16}
+        color="#7cf7ff"
+        maxWidth={5.8}
+        textAlign="center"
+        anchorX="center"
+      >
+        {status.toUpperCase()}
+      </Text>
+    </group>
+  )
+}
+
 export function Arena({ room }: { room: Room | null }) {
   const submissions = room?.submissions ?? []
+  const isJudged = room?.status === 'finalized'
+  const hasPlayers = submissions.length > 0
   const slots = useMemo(() => {
-    const count = Math.max(8, submissions.length)
+    const count = Math.max(12, submissions.length)
     return Array.from({ length: count }, (_, index) => {
       const angle = (index / count) * Math.PI * 2
       return {
-        x: Math.cos(angle) * 4.8,
-        z: Math.sin(angle) * 4.8,
+        x: Math.cos(angle) * 5.15,
+        z: Math.sin(angle) * 5.15,
         angle,
       }
     })
@@ -54,7 +154,18 @@ export function Arena({ room }: { room: Room | null }) {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[13, 96]} />
-        <meshStandardMaterial color="#111827" roughness={0.9} />
+        <meshStandardMaterial color="#0b1324" roughness={0.9} />
+      </mesh>
+
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
+        <ringGeometry args={[5.85, 6.15, 96]} />
+        <meshStandardMaterial
+          color="#7cf7ff"
+          emissive="#35cfff"
+          emissiveIntensity={hasPlayers ? 0.95 : 0.35}
+          transparent
+          opacity={0.7}
+        />
       </mesh>
 
       <Model path={`${ASSET_BASE}/road-roundabout.glb`} position={[0, 0.02, 0]} scale={2.15} />
@@ -96,8 +207,24 @@ export function Arena({ room }: { room: Room | null }) {
       </mesh>
       <mesh position={[0, 1.31, 0]} castShadow>
         <cylinderGeometry args={[2.2, 2.2, 0.16, 48]} />
-        <meshStandardMaterial color="#7cf7ff" emissive="#35cfff" emissiveIntensity={1.6} />
+        <meshStandardMaterial
+          color={isJudged ? '#ffd166' : '#7cf7ff'}
+          emissive={isJudged ? '#ffb703' : '#35cfff'}
+          emissiveIntensity={1.6}
+        />
       </mesh>
+      <HologramRing active={hasPlayers} />
+
+      {Array.from({ length: 5 }, (_, index) => (
+        <ValidatorDrone
+          key={`validator-${index}`}
+          angle={(index / 5) * Math.PI * 2}
+          index={index}
+          active={hasPlayers}
+        />
+      ))}
+
+      <ArenaBanner room={room} />
 
       <Text
         position={[0, 2.5, -1.1]}
@@ -119,6 +246,7 @@ export function Arena({ room }: { room: Room | null }) {
           name={submissions[index]?.display_name ?? `Seat ${index + 1}`}
           active={Boolean(submissions[index])}
           rank={room?.leaderboard.findIndex((entry) => entry.player === submissions[index]?.player) ?? -1}
+          modelIndex={index}
         />
       ))}
 

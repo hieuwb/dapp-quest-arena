@@ -26,12 +26,22 @@ export default function App() {
       <div className="relative z-10 grid min-h-screen grid-cols-1 gap-4 p-4 lg:grid-cols-[23rem_minmax(0,1fr)_24rem]">
         <div className="pointer-events-auto space-y-4">
           <header className="panel">
-            <p className="eyebrow text-cyan-200">GenLayer Mini-game</p>
-            <h1 className="mt-1 text-4xl font-black tracking-tight">Quest Arena</h1>
+            <p className="eyebrow text-cyan-200">GenLayer weekly mini-game</p>
+            <h1 className="mt-1 text-5xl font-black leading-none tracking-tight">
+              Quest
+              <span className="block bg-gradient-to-r from-cyan-200 via-amber-200 to-pink-200 bg-clip-text text-transparent">
+                Arena
+              </span>
+            </h1>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              A 3D community room game where Intelligent Contracts judge subjective
-              answers and mint an XP leaderboard.
+              Step into a live 3D room, submit your answer, then watch GenLayer
+              validators turn subjective judging into an XP leaderboard.
             </p>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <MiniStat label="Round" value={room ? `${room.durationMinutes}m` : '10m'} />
+              <MiniStat label="Seats" value={room ? `${room.submissions.length}/20` : '0/20'} />
+              <MiniStat label="Prize" value={room ? `${room.xpTotal} XP` : 'XP'} />
+            </div>
             <div className="mt-4 flex items-center justify-between gap-3">
               <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-300">
                 {isEnabled() ? 'On-chain' : 'Mock mode'}
@@ -55,5 +65,14 @@ export default function App() {
       </div>
       <Toasts />
     </main>
+  )
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+      <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
+      <p className="mt-1 font-mono text-sm font-black text-white">{value}</p>
+    </div>
   )
 }

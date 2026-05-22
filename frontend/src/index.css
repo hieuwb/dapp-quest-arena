@@ -8,9 +8,12 @@ body,
 }
 
 body {
-  background: #020617;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.16), transparent 32rem),
+    radial-gradient(circle at 80% 8%, rgba(250, 204, 21, 0.12), transparent 28rem),
+    #020617;
   font-family:
-    Inter,
+    'Trebuchet MS',
     ui-sans-serif,
     system-ui,
     -apple-system,
@@ -40,10 +43,44 @@ button:disabled {
 .panel {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 1.5rem;
-  background: rgba(15, 23, 42, 0.76);
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.84), rgba(8, 13, 31, 0.7)),
+    radial-gradient(circle at top right, rgba(124, 247, 255, 0.1), transparent 18rem);
   padding: 1rem;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(18px);
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  pointer-events: none;
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 42%,
+    transparent 62%
+  );
+  opacity: 0.35;
+  transform: translateX(-65%);
+  animation: panel-sheen 7s ease-in-out infinite;
+}
+
+.panel > * {
+  position: relative;
+}
+
+@keyframes panel-sheen {
+  0%,
+  55% {
+    transform: translateX(-72%);
+  }
+  100% {
+    transform: translateX(72%);
+  }
 }
 
 @media (min-width: 768px) {
@@ -155,4 +192,3 @@ button:disabled {
   border-color: rgba(124, 247, 255, 0.65);
   background: rgba(34, 211, 238, 0.14);
 }
-

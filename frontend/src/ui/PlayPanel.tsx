@@ -14,11 +14,35 @@ export function PlayPanel() {
   const room = rooms.find((item) => item.id === selectedRoomId) ?? rooms[0]
 
   if (!room) return null
+  const answerIsReady = answer.trim().length >= 3
+  const canFinalize = room.submissions.length >= 2 && !finalizing
+  const phase =
+    room.status === 'finalized'
+      ? 'Leaderboard minted'
+      : room.submissions.length >= 2
+        ? 'Ready for validator judging'
+        : 'Waiting for challengers'
 
   return (
     <section className="panel">
       <p className="eyebrow text-amber-200">Active challenge</p>
       <h2 className="mt-1 text-3xl font-black leading-tight text-white">{room.title}</h2>
+      <div className="mt-3 rounded-2xl border border-amber-300/25 bg-amber-300/10 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs font-black uppercase tracking-[0.18em] text-amber-100">
+            {phase}
+          </span>
+          <span className="font-mono text-xs font-black text-white">
+            {room.submissions.length >= 2 ? 'validators online' : 'need 2 players'}
+          </span>
+        </div>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-amber-200 to-pink-300 transition-all"
+            style={{ width: `${Math.min(100, (room.submissions.length / 2) * 100)}%` }}
+          />
+        </div>
+      </div>
       <div className="mt-4 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 p-4 text-sm leading-6 text-cyan-50">
         {room.prompt}
       </div>
@@ -46,11 +70,15 @@ export function PlayPanel() {
             value={answer}
             maxLength={500}
             onChange={(event) => setAnswer(event.target.value)}
-            placeholder="Write your answer for validators..."
+            placeholder="Enter your arena answer..."
           />
+          <div className="mt-2 flex items-center justify-between text-xs text-slate-300">
+            <span>{answerIsReady ? 'Answer ready for validators.' : 'Write at least 3 characters.'}</span>
+            <span className="font-mono">{answer.length}/500</span>
+          </div>
           <button
             className="primary-button mt-3 w-full"
-            disabled={submitting}
+            disabled={submitting || !answerIsReady}
             onClick={async () => {
               await submitAnswer(answer)
               setAnswer('')
@@ -60,10 +88,10 @@ export function PlayPanel() {
           </button>
           <button
             className="ghost-button mt-2 w-full"
-            disabled={finalizing}
+            disabled={!canFinalize}
             onClick={finalizeSelectedRoom}
           >
-            {finalizing ? 'Validators judging...' : 'Finalize Leaderboard'}
+            {finalizing ? 'Validators judging...' : canFinalize ? 'Finalize Leaderboard' : 'Need 2 Answers'}
           </button>
         </div>
       ) : (
@@ -85,4 +113,3 @@ function Metric({ label, value }: { label: string; value: string }) {
     </div>
   )
 }
-
