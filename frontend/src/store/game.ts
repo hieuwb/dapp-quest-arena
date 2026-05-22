@@ -30,14 +30,35 @@ type State = {
 }
 
 let toastCounter = 0
+let roomSlugCounter = 0
+const reservedRoomIds = new Set<string>()
 
-function slugify(value: string): string {
-  const base = value
+function makeRoomSlug(value: string): string {
+  const slug = value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 42)
-  return `${base || 'room'}-${Date.now().toString(36)}`
+
+  return slug || 'room'
+}
+
+function makeUniqueRoomId(value: string, rooms: Room[]): string {
+  const base = makeRoomSlug(value)
+  const usedIds = new Set(rooms.map((room) => room.id))
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    roomSlugCounter += 1
+    const suffix = `${Date.now().toString(36)}-${roomSlugCounter.toString(36)}`
+    const roomId = `${base}-${suffix}`.slice(0, 64)
+
+    if (!usedIds.has(roomId) && !reservedRoomIds.has(roomId)) {
+      reservedRoomIds.add(roomId)
+      return roomId
+    }
+  }
+
+  throw new Error('Could not create a unique room id.')
 }
 
 function shortHash(hash: string): string {
@@ -48,6 +69,22 @@ function upsertRoom(rooms: Room[], room: Room): Room[] {
   const exists = rooms.some((item) => item.id === room.id)
   if (!exists) return [room, ...rooms]
   return rooms.map((item) => (item.id === room.id ? room : item))
+}
+
+function roomFromSpec(spec: RoomSpec, createdBy: string): Room {
+  return {
+    id: spec.id,
+    title: spec.title,
+    prompt: spec.prompt,
+    rubric: spec.rubric,
+    status: 'open',
+    createdBy,
+    durationMinutes: spec.duration_minutes,
+    submissions: [],
+    leaderboard: [],
+    reasoning: '',
+    xpTotal: spec.xp_total,
+  }
 }
 
 function getSelectedRoom(state: State): Room | null {
@@ -123,13 +160,27 @@ export const useGameStore = create<State>()(
         const cleanTitle = title.trim()
         const cleanPrompt = prompt.trim()
         if (cleanTitle.length < 3 || cleanPrompt.length < 12) {
-          get().pushToast('error', 'Room title or prompt is too short.')
+          get().pushToast('error', 'Room title needs 3+ characters and prompt needs 12+ characters.')
           return false
         }
         if (get().creating) return false
+        if (gl.isEnabled() && !get().userAddress) {
+          get().pushToast('error', 'Connect your wallet before creating an on-chain room.')
+          return false
+        }
+
+        let roomId = ''
+        try {
+          roomId = makeUniqueRoomId(cleanTitle, get().rooms)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          get().pushToast('error', message)
+          return false
+        }
+
         set({ creating: true })
         const spec: RoomSpec = {
-          id: slugify(cleanTitle),
+          id: roomId,
           title: cleanTitle,
           prompt: cleanPrompt,
           rubric:
@@ -137,37 +188,27 @@ export const useGameStore = create<State>()(
           duration_minutes: 10,
           xp_total: 1000,
         }
+        let transactionSucceeded = false
         try {
           if (gl.isEnabled()) {
-            if (!get().userAddress) {
-              get().pushToast('error', 'Connect wallet first.')
-              return false
-            }
             const hash = await gl.createRoom(spec)
+            transactionSucceeded = true
             get().pushToast('success', `Room created ${shortHash(hash)}`)
-            const room = await gl.getRoom(spec.id)
-            if (room) {
-              set((state) => ({
-                rooms: upsertRoom(state.rooms, room),
-                selectedRoomId: room.id,
-              }))
-              return true
+            let room: Room | null = null
+            try {
+              room = await gl.getRoom(spec.id)
+            } catch {
+              get().pushToast('info', 'Room confirmed; syncing read-back may take a moment.')
             }
-            return false
+            const confirmedRoom =
+              room ?? roomFromSpec(spec, get().userAddress ?? gl.getUserAddress() ?? 'on-chain')
+            set((state) => ({
+              rooms: upsertRoom(state.rooms, confirmedRoom),
+              selectedRoomId: confirmedRoom.id,
+            }))
+            return true
           } else {
-            const room: Room = {
-              id: spec.id,
-              title: spec.title,
-              prompt: spec.prompt,
-              rubric: spec.rubric,
-              status: 'open',
-              createdBy: get().userAddress ?? 'mock://host',
-              durationMinutes: spec.duration_minutes,
-              submissions: [],
-              leaderboard: [],
-              reasoning: '',
-              xpTotal: spec.xp_total,
-            }
+            const room = roomFromSpec(spec, get().userAddress ?? 'mock://host')
             set((state) => ({
               rooms: [room, ...state.rooms],
               selectedRoomId: room.id,
@@ -180,6 +221,9 @@ export const useGameStore = create<State>()(
           get().pushToast('error', `Create failed: ${message.slice(0, 100)}`)
           return false
         } finally {
+          if (!transactionSucceeded && !get().rooms.some((room) => room.id === roomId)) {
+            reservedRoomIds.delete(roomId)
+          }
           set({ creating: false })
         }
       },
@@ -319,11 +363,17 @@ export const useGameStore = create<State>()(
     }),
     {
       name: 'quest-arena-store',
-      version: 1,
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<State>
+        return {
+          selectedRoomId: state.selectedRoomId ?? initialRooms[0]?.id ?? null,
+          displayName: state.displayName ?? 'Builder',
+        }
+      },
       partialize: (state) => ({
         selectedRoomId: state.selectedRoomId,
         displayName: state.displayName,
-        userAddress: state.userAddress,
       }),
     },
   ),
