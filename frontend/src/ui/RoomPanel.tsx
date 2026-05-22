@@ -58,9 +58,11 @@ export function RoomPanel() {
           className="primary-button mt-3 w-full"
           disabled={creating}
           onClick={async () => {
-            await createRoom(title, prompt)
-            setTitle('')
-            setPrompt('')
+            const created = await createRoom(title, prompt)
+            if (created) {
+              setTitle('')
+              setPrompt('')
+            }
           }}
         >
           {creating ? 'Creating...' : 'Create Room'}
@@ -69,4 +71,3 @@ export function RoomPanel() {
     </section>
   )
 }
-

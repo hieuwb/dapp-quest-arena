@@ -20,7 +20,7 @@ type State = {
   connect: () => Promise<void>
   disconnect: () => void
   seedRooms: () => Promise<void>
-  createRoom: (title: string, prompt: string) => Promise<void>
+  createRoom: (title: string, prompt: string) => Promise<boolean>
   submitAnswer: (answer: string) => Promise<void>
   finalizeSelectedRoom: () => Promise<void>
   refreshRooms: () => Promise<void>
@@ -124,9 +124,9 @@ export const useGameStore = create<State>()(
         const cleanPrompt = prompt.trim()
         if (cleanTitle.length < 3 || cleanPrompt.length < 12) {
           get().pushToast('error', 'Room title or prompt is too short.')
-          return
+          return false
         }
-        if (get().creating) return
+        if (get().creating) return false
         set({ creating: true })
         const spec: RoomSpec = {
           id: slugify(cleanTitle),
@@ -141,7 +141,7 @@ export const useGameStore = create<State>()(
           if (gl.isEnabled()) {
             if (!get().userAddress) {
               get().pushToast('error', 'Connect wallet first.')
-              return
+              return false
             }
             const hash = await gl.createRoom(spec)
             get().pushToast('success', `Room created ${shortHash(hash)}`)
@@ -151,7 +151,9 @@ export const useGameStore = create<State>()(
                 rooms: upsertRoom(state.rooms, room),
                 selectedRoomId: room.id,
               }))
+              return true
             }
+            return false
           } else {
             const room: Room = {
               id: spec.id,
@@ -171,10 +173,12 @@ export const useGameStore = create<State>()(
               selectedRoomId: room.id,
             }))
             get().pushToast('success', 'Room created in mock mode.')
+            return true
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
           get().pushToast('error', `Create failed: ${message.slice(0, 100)}`)
+          return false
         } finally {
           set({ creating: false })
         }
